@@ -9,7 +9,11 @@ let package = Package(
             name: "Tardy",
             path: "Sources/Tardy",
             exclude: ["Resources/Tardy.entitlements"],
-            resources: [.copy("Resources/CalendarUsage.plist")]
+            resources: [
+                .copy("Resources/CalendarUsage.plist"),
+                .copy("Resources/Fonts"),
+                .copy("Resources/Sounds"),
+            ]
         ),
         .testTarget(
             name: "TardyTests",
