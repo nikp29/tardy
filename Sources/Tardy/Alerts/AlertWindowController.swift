@@ -18,6 +18,29 @@ final class AlertWindowController {
         )
 
         let hostingView = NSHostingView(rootView: contentView)
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
+
+        // Create blur backdrop using NSVisualEffectView
+        let blurView = NSVisualEffectView(frame: screen.frame)
+        blurView.material = .hudWindow
+        blurView.blendingMode = .behindWindow
+        blurView.state = .active
+
+        // Dark tint overlay
+        let tintView = NSView(frame: screen.frame)
+        tintView.wantsLayer = true
+        tintView.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.35).cgColor
+        tintView.autoresizingMask = [.width, .height]
+        blurView.addSubview(tintView)
+
+        // Add SwiftUI content on top
+        blurView.addSubview(hostingView)
+        NSLayoutConstraint.activate([
+            hostingView.centerXAnchor.constraint(equalTo: blurView.centerXAnchor),
+            hostingView.centerYAnchor.constraint(equalTo: blurView.centerYAnchor),
+            hostingView.widthAnchor.constraint(lessThanOrEqualTo: blurView.widthAnchor),
+            hostingView.heightAnchor.constraint(lessThanOrEqualTo: blurView.heightAnchor),
+        ])
 
         let win = NSWindow(
             contentRect: screen.frame,
@@ -25,7 +48,7 @@ final class AlertWindowController {
             backing: .buffered,
             defer: false
         )
-        win.contentView = hostingView
+        win.contentView = blurView
         win.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
         win.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         win.isOpaque = false
@@ -97,15 +120,8 @@ struct AlertContentView: View {
     @State private var appeared = false
 
     var body: some View {
-        ZStack {
-            // Blurred dark backdrop
-            Color.black.opacity(0.55)
-                .ignoresSafeArea()
-                .background(.ultraThinMaterial)
-                .ignoresSafeArea()
-
-            // Floating card
-            VStack(spacing: 12) {
+        // Floating card — backdrop handled by AppKit NSVisualEffectView
+        VStack(spacing: 12) {
                 Text("STARTING SOON")
                     .font(.custom("Instrument Sans", size: 9))
                     .fontWeight(.bold)
@@ -184,7 +200,7 @@ struct AlertContentView: View {
             .scaleEffect(appeared ? 1 : 0.92)
             .opacity(appeared ? 1 : 0)
             .animation(.spring(response: 0.5, dampingFraction: 0.75), value: appeared)
-        }
+            .fixedSize(horizontal: false, vertical: true)
         .onAppear {
             updateCountdown()
             countdownTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
@@ -308,7 +324,7 @@ struct ActionButton: View {
                         .foregroundColor(.white.opacity(isHovered ? 0.35 : 0.2))
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity)
             .padding(.vertical, 9)
             .background(Color.white.opacity(isPressed ? 0.07 : isHovered ? 0.04 : 0))
             .overlay(
