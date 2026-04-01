@@ -28,4 +28,40 @@ struct SettingsManagerTests {
         manager.leadTimeSeconds = 99
         #expect(manager.leadTimeSeconds == 60)
     }
+
+    @Test("default alert sound is crystal")
+    func defaultAlertSound() {
+        let defaults = UserDefaults(suiteName: "test-settings-\(UUID().uuidString)")!
+        let manager = SettingsManager(defaults: defaults)
+        #expect(manager.alertSound == .crystal)
+    }
+
+    @Test("persists alert sound")
+    func persistAlertSound() {
+        let suite = "test-settings-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let manager = SettingsManager(defaults: defaults)
+        manager.alertSound = .deepBell
+
+        let manager2 = SettingsManager(defaults: defaults)
+        #expect(manager2.alertSound == .deepBell)
+    }
+
+    @Test("default launch on login is true")
+    func defaultLaunchOnLogin() {
+        let defaults = UserDefaults(suiteName: "test-settings-\(UUID().uuidString)")!
+        let manager = SettingsManager(defaults: defaults)
+        #expect(manager.launchOnLogin == true)
+    }
+
+    @Test("persists launch on login")
+    func persistLaunchOnLogin() {
+        let suite = "test-settings-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let manager = SettingsManager(defaults: defaults)
+        manager.launchOnLogin = false
+
+        let manager2 = SettingsManager(defaults: defaults)
+        #expect(manager2.launchOnLogin == false)
+    }
 }
