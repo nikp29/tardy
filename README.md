@@ -4,6 +4,9 @@ A macOS menu bar app that takes over your screen to make sure you're never late 
 
 Tardy reads your calendar events directly from macOS Calendar.app and displays a full-screen alert before each event starts — a blurred overlay with a floating card showing the event name, countdown, and a one-click button to join the call.
 
+<img width="1470" height="956" alt="Screenshot 2026-04-01 at 8 38 57 AM" src="https://github.com/user-attachments/assets/d1b3b1ac-e2f5-4496-bc1f-545386cb4fa6" />
+
+
 ## Features
 
 - **Full-screen takeover alerts** — impossible to miss, with a frosted glass backdrop and countdown timer
