@@ -1,9 +1,31 @@
+# macOS
 .DS_Store
-/.build
-/Packages
+.AppleDouble
+.LSOverride
+._*
+
+# Xcode
 xcuserdata/
 DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.moved-aside
+
+# Swift Package Manager
+/.build
+/Packages
+Package.resolved
 .swiftpm/configuration/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+.swiftpm/xcode/package.xcworkspace/xcshareddata/
+
+# Credentials
 .netrc
+
+# Superpowers
 .superpowers/
