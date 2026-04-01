@@ -2,12 +2,18 @@ import AppKit
 import SwiftUI
 
 final class AlertWindowController {
-    private var window: NSWindow?
+    private var windows: [String: NSWindow] = [:]
     var onDismiss: ((UpcomingEvent) -> Void)?
     var onSnooze: ((UpcomingEvent) -> Void)?
 
     func show(event: UpcomingEvent) {
         guard let screen = NSScreen.main else { return }
+
+        // Dismiss existing alert for this event if already showing
+        if let existing = windows[event.id] {
+            existing.orderOut(nil)
+            windows.removeValue(forKey: event.id)
+        }
 
         let contentView = AlertContentView(
             event: event,
@@ -62,24 +68,24 @@ final class AlertWindowController {
             win.animator().alphaValue = 1
         }
 
-        self.window = win
+        windows[event.id] = win
     }
 
     private func dismiss(event: UpcomingEvent) {
-        animateOut {
+        animateOut(event: event) {
             self.onDismiss?(event)
         }
     }
 
     private func snooze(event: UpcomingEvent) {
-        animateOut {
+        animateOut(event: event) {
             self.onSnooze?(event)
         }
     }
 
     private func openURL(_ url: URL, event: UpcomingEvent) {
         NSWorkspace.shared.open(url)
-        animateOut {
+        animateOut(event: event) {
             self.onDismiss?(event)
         }
     }
@@ -88,19 +94,19 @@ final class AlertWindowController {
         if let url = URL(string: "tel:\(phone.replacingOccurrences(of: " ", with: ""))") {
             NSWorkspace.shared.open(url)
         }
-        animateOut {
+        animateOut(event: event) {
             self.onDismiss?(event)
         }
     }
 
-    private func animateOut(completion: @escaping () -> Void) {
-        guard let win = window else { return }
+    private func animateOut(event: UpcomingEvent, completion: @escaping () -> Void) {
+        guard let win = windows[event.id] else { return }
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.2
             win.animator().alphaValue = 0
         }, completionHandler: {
             win.orderOut(nil)
-            self.window = nil
+            self.windows.removeValue(forKey: event.id)
             completion()
         })
     }
