@@ -84,15 +84,15 @@ final class AlertWindowController {
     }
 
     private func openURL(_ url: URL, event: UpcomingEvent) {
-        NSWorkspace.shared.open(url)
         animateOut(event: event) {
             self.onDismiss?(event)
         }
+        NSWorkspace.shared.open(url, configuration: NSWorkspace.OpenConfiguration()) { _, _ in }
     }
 
     private func dialPhone(_ phone: String, event: UpcomingEvent) {
         if let url = URL(string: "tel:\(phone.replacingOccurrences(of: " ", with: ""))") {
-            NSWorkspace.shared.open(url)
+            NSWorkspace.shared.open(url, configuration: NSWorkspace.OpenConfiguration()) { _, _ in }
         }
         animateOut(event: event) {
             self.onDismiss?(event)
