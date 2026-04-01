@@ -32,10 +32,14 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 # Copy binary
 cp "$BINARY" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
-# Copy resource bundle to Resources, symlink from MacOS so SPM's Bundle.module finds it
+# Copy resource bundle into Contents/Resources
 if [ -d "$RESOURCE_BUNDLE" ]; then
     cp -R "$RESOURCE_BUNDLE" "$APP_BUNDLE/Contents/Resources/"
-    ln -s ../Resources/Tardy_Tardy.bundle "$APP_BUNDLE/Contents/MacOS/Tardy_Tardy.bundle"
+fi
+
+# Copy app icon
+if [ -f "Sources/Tardy/Resources/AppIcon.icns" ]; then
+    cp Sources/Tardy/Resources/AppIcon.icns "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
 fi
 
 # Create Info.plist
@@ -64,6 +68,8 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
     <true/>
     <key>NSCalendarsUsageDescription</key>
     <string>Tardy needs calendar access to show you upcoming event reminders.</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>NSHighResolutionCapable</key>
     <true/>
 </dict>

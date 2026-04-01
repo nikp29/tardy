@@ -10,7 +10,7 @@ enum FontRegistration {
         ]
 
         for fontFile in fontFiles {
-            guard let fontURL = Bundle.module.url(forResource: fontFile, withExtension: "ttf", subdirectory: "Fonts") else {
+            guard let fontURL = Bundle.appModule.url(forResource: fontFile, withExtension: "ttf", subdirectory: "Fonts") else {
                 print("Tardy: Font file not found: \(fontFile).ttf")
                 continue
             }

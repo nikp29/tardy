@@ -18,7 +18,7 @@ final class SoundPlayer {
     private var player: AVAudioPlayer?
 
     func play(_ sound: AlertSound) {
-        guard let url = Bundle.module.url(forResource: sound.rawValue, withExtension: "mp3", subdirectory: "Sounds") else {
+        guard let url = Bundle.appModule.url(forResource: sound.rawValue, withExtension: "mp3", subdirectory: "Sounds") else {
             print("Tardy: Sound file not found: \(sound.rawValue).mp3")
             return
         }
