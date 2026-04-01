@@ -32,9 +32,10 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 # Copy binary
 cp "$BINARY" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
-# Copy resource bundle (fonts, sounds, etc.)
+# Copy resource bundle to Resources, symlink from MacOS so SPM's Bundle.module finds it
 if [ -d "$RESOURCE_BUNDLE" ]; then
     cp -R "$RESOURCE_BUNDLE" "$APP_BUNDLE/Contents/Resources/"
+    ln -s ../Resources/Tardy_Tardy.bundle "$APP_BUNDLE/Contents/MacOS/Tardy_Tardy.bundle"
 fi
 
 # Create Info.plist
@@ -69,8 +70,8 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
 </plist>
 EOF
 
-# Copy entitlements and ad-hoc sign
-codesign --force --deep --sign - \
+# Ad-hoc sign the app
+codesign --force --sign - \
     --entitlements Sources/Tardy/Resources/Tardy.entitlements \
     "$APP_BUNDLE" 2>&1
 
