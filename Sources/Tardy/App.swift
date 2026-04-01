@@ -26,6 +26,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, CalendarServiceDelegate {
         calendarService = CalendarService()
         calendarService.delegate = self
         calendarService.start()
+
+        if !UserDefaults.standard.bool(forKey: "hasLaunchedBefore") {
+            UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
+            menuBarController.openSettings()
+        }
     }
 
     // MARK: - CalendarServiceDelegate

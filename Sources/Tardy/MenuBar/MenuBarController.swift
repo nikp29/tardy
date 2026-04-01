@@ -54,7 +54,7 @@ final class MenuBarController: NSObject, NSWindowDelegate {
         statusItem?.menu = menu
     }
 
-    @objc private func openSettings() {
+    @objc func openSettings() {
         if let existing = settingsWindow, existing.isVisible {
             existing.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
