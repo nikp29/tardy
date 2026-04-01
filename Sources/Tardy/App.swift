@@ -1,15 +1,20 @@
 import AppKit
 import Foundation
+import ServiceManagement
 
 class AppDelegate: NSObject, NSApplicationDelegate, CalendarServiceDelegate {
     private let settings = SettingsManager()
+    private let soundPlayer = SoundPlayer()
     private var calendarService: CalendarService!
     private var alertScheduler: AlertScheduler!
     private var alertWindowController = AlertWindowController()
     private var menuBarController: MenuBarController!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        menuBarController = MenuBarController(settings: settings)
+        FontRegistration.registerCustomFonts()
+        configureLaunchOnLogin()
+
+        menuBarController = MenuBarController(settings: settings, soundPlayer: soundPlayer)
         menuBarController.setup()
 
         alertScheduler = AlertScheduler(settings: settings) { [weak self] event in
@@ -40,11 +45,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, CalendarServiceDelegate {
     // MARK: - Alert presentation
 
     private func showAlert(for event: UpcomingEvent) {
+        soundPlayer.play(settings.alertSound)
+
         alertWindowController.onDismiss = { _ in }
         alertWindowController.onSnooze = { [weak self] event in
             self?.alertScheduler.snooze(event: event)
         }
         alertWindowController.show(event: event)
+    }
+
+    // MARK: - Login item
+
+    private func configureLaunchOnLogin() {
+        let service = SMAppService.mainApp
+        if settings.launchOnLogin {
+            try? service.register()
+        } else {
+            try? service.unregister()
+        }
     }
 }
 

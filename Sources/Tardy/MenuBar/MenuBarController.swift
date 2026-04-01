@@ -5,10 +5,12 @@ final class MenuBarController {
     private var statusItem: NSStatusItem?
     private var settingsWindow: NSWindow?
     private let settings: SettingsManager
+    private let soundPlayer: SoundPlayer
     private var nextEvent: UpcomingEvent?
 
-    init(settings: SettingsManager) {
+    init(settings: SettingsManager, soundPlayer: SoundPlayer) {
         self.settings = settings
+        self.soundPlayer = soundPlayer
     }
 
     func setup() {
@@ -58,11 +60,11 @@ final class MenuBarController {
             return
         }
 
-        let view = SettingsView(settings: settings)
+        let view = SettingsView(settings: settings, soundPlayer: soundPlayer)
         let hostingView = NSHostingView(rootView: view)
 
         let win = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 150),
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 320),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -70,6 +72,8 @@ final class MenuBarController {
         win.title = "Tardy Settings"
         win.contentView = hostingView
         win.center()
+        win.isMovableByWindowBackground = true
+        win.backgroundColor = NSColor(red: 22/255, green: 22/255, blue: 32/255, alpha: 0.98)
         win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
