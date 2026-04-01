@@ -142,6 +142,8 @@ struct AlertContentView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white.opacity(0.95))
                     .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .truncationMode(.tail)
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 6)
                     .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.2), value: appeared)

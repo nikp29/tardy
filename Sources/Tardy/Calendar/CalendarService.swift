@@ -1,3 +1,4 @@
+import AppKit
 import EventKit
 import Foundation
 
@@ -57,9 +58,20 @@ final class CalendarService {
             name: .EKEventStoreChanged,
             object: store
         )
+        // Re-fetch on wake from sleep so timers are recalculated
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(didWake),
+            name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
     }
 
     @objc private func storeChanged(_ notification: Notification) {
+        fetchAndNotify()
+    }
+
+    @objc private func didWake(_ notification: Notification) {
         fetchAndNotify()
     }
 
@@ -101,7 +113,20 @@ final class CalendarService {
         let predicate = store.predicateForEvents(withStart: now, end: endOfDay, calendars: nil)
         let ekEvents = store.events(matching: predicate)
 
-        return ekEvents.map { event in
+        let filtered = ekEvents.filter { event in
+            // Skip all-day events (birthdays, holidays, etc.)
+            if event.isAllDay { return false }
+            // Skip cancelled events
+            if event.status == .canceled { return false }
+            // Skip declined events
+            if let me = event.attendees?.first(where: { $0.isCurrentUser }),
+               me.participantStatus == .declined {
+                return false
+            }
+            return true
+        }
+
+        return filtered.map { event in
             let conferenceInfo = ConferenceLinkExtractor.extract(
                 url: event.url,
                 notes: event.notes,
