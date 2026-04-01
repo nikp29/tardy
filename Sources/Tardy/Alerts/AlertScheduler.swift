@@ -18,7 +18,8 @@ final class AlertScheduler {
     }
 
     func updateEvents(_ events: [UpcomingEvent]) {
-        let newEventsByID = Dictionary(uniqueKeysWithValues: events.map { ($0.id, $0) })
+        // Use last-wins to handle duplicate event IDs from EventKit
+        let newEventsByID = Dictionary(events.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
 
         // Cancel timers for removed events
         for id in timers.keys where newEventsByID[id] == nil {
