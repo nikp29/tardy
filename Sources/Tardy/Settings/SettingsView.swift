@@ -183,22 +183,21 @@ struct SoundRow: View {
 
                 Spacer()
 
-                if isHovered {
-                    Button(action: onPreview) {
-                        Text("Preview")
-                            .font(.custom("Instrument Sans", size: 11))
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white.opacity(0.3))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .transition(.opacity)
+                Button(action: onPreview) {
+                    Text("Preview")
+                        .font(.custom("Instrument Sans", size: 11))
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white.opacity(0.3))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        )
                 }
+                .buttonStyle(.plain)
+                .opacity(isHovered ? 1 : 0)
+                .animation(.easeInOut(duration: 0.15), value: isHovered)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)

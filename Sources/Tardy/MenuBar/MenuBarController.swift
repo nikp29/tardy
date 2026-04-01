@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-final class MenuBarController {
+final class MenuBarController: NSObject, NSWindowDelegate {
     private var statusItem: NSStatusItem?
     private var settingsWindow: NSWindow?
     private let settings: SettingsManager
@@ -57,8 +57,14 @@ final class MenuBarController {
     @objc private func openSettings() {
         if let existing = settingsWindow, existing.isVisible {
             existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
             return
         }
+
+        // Clean up old window completely before creating new one
+        settingsWindow?.contentView = nil
+        settingsWindow?.close()
+        settingsWindow = nil
 
         let view = SettingsView(settings: settings, soundPlayer: soundPlayer)
         let hostingView = NSHostingView(rootView: view)
@@ -71,13 +77,22 @@ final class MenuBarController {
         )
         win.title = "Tardy Settings"
         win.contentView = hostingView
+        win.delegate = self
         win.center()
         win.isMovableByWindowBackground = true
+        win.isReleasedWhenClosed = false
         win.backgroundColor = NSColor(red: 22/255, green: 22/255, blue: 32/255, alpha: 0.98)
         win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
         settingsWindow = win
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        if let win = notification.object as? NSWindow, win === settingsWindow {
+            settingsWindow?.contentView = nil
+            settingsWindow = nil
+        }
     }
 
     @objc private func quit() {
