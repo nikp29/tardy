@@ -180,7 +180,7 @@ struct AlertContentView: View {
             }
             .padding(.horizontal, 44)
             .padding(.vertical, 40)
-            .frame(maxWidth: 380)
+            .frame(width: 420)
             .background(
                 LinearGradient(
                     colors: [
@@ -324,8 +324,7 @@ struct ActionButton: View {
                         .foregroundColor(.white.opacity(isHovered ? 0.35 : 0.2))
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 9)
+            .frame(maxWidth: .infinity, minHeight: 44)
             .background(Color.white.opacity(isPressed ? 0.07 : isHovered ? 0.04 : 0))
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
