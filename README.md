@@ -24,7 +24,7 @@ Tardy reads your calendar events directly from macOS Calendar.app and displays a
 ## Building from Source
 
 ```bash
-git clone https://github.com/yourusername/tardy.git
+git clone https://github.com/nikp29/tardy.git
 cd tardy
 swift build
 swift run Tardy
@@ -35,7 +35,7 @@ On first launch, Tardy will ask for calendar access and open the settings window
 ## Install via Homebrew
 
 ```bash
-brew tap yourusername/tardy
+brew tap nikp29/tardy
 brew install --cask tardy
 ```
 
