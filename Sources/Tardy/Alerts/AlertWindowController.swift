@@ -33,7 +33,7 @@ final class AlertWindowController {
         blurView.state = .active
 
         // Dark tint overlay
-        let tintView = NSView(frame: screen.frame)
+        let tintView = NSView(frame: blurView.bounds)
         tintView.wantsLayer = true
         tintView.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.35).cgColor
         tintView.autoresizingMask = [.width, .height]
