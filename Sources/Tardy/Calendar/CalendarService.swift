@@ -65,6 +65,20 @@ final class CalendarService {
             name: NSWorkspace.didWakeNotification,
             object: nil
         )
+        // Re-fetch when system timezone changes so day boundaries are recalculated
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(timezoneOrDayChanged),
+            name: .NSSystemTimeZoneDidChange,
+            object: nil
+        )
+        // Re-fetch on calendar day rollover for reliable midnight handling
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(timezoneOrDayChanged),
+            name: .NSCalendarDayChanged,
+            object: nil
+        )
     }
 
     @objc private func storeChanged(_ notification: Notification) {
@@ -72,6 +86,13 @@ final class CalendarService {
     }
 
     @objc private func didWake(_ notification: Notification) {
+        fetchAndNotify()
+    }
+
+    @objc private func timezoneOrDayChanged(_ notification: Notification) {
+        midnightTimer?.invalidate()
+        midnightTimer = nil
+        scheduleMidnightRollover()
         fetchAndNotify()
     }
 
@@ -100,6 +121,7 @@ final class CalendarService {
     // MARK: - Fetching
 
     func fetchAndNotify() {
+        store.refreshSourcesIfNecessary()
         let events = fetchTodayEvents()
         currentEvents = events
         delegate?.calendarService(self, didUpdateEvents: events)
