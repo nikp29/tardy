@@ -179,7 +179,14 @@ struct AlertContentView: View {
                     .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.35), value: appeared)
 
                 HStack(spacing: 8) {
-                    ActionButton(label: "Snooze", subtitle: "2 min", action: onSnooze)
+                    ActionButton(
+                        label: "Snooze",
+                        subtitle: "2 min",
+                        // Warm amber tint to differentiate snooze (temporary, will return)
+                        // from dismiss (permanent). Matches Tailwind amber-400.
+                        accent: Color(red: 251/255, green: 191/255, blue: 36/255),
+                        action: onSnooze
+                    )
                     ActionButton(label: "Dismiss", subtitle: nil, action: onDismiss)
                 }
                 .opacity(appeared ? 1 : 0)
@@ -314,10 +321,42 @@ struct InteractiveButton: View {
 struct ActionButton: View {
     let label: String
     let subtitle: String?
+    /// Optional accent color. When set, the button uses tinted background, border,
+    /// and text instead of the default neutral white-on-glass treatment. Used to
+    /// differentiate Snooze (amber, temporary) from Dismiss (neutral, permanent).
+    var accent: Color? = nil
     let action: () -> Void
 
     @State private var isHovered = false
     @State private var isPressed = false
+
+    private var labelColor: Color {
+        if let accent {
+            return accent.opacity(isHovered ? 1.0 : 0.95)
+        }
+        return .white.opacity(isHovered ? 0.6 : 0.35)
+    }
+
+    private var subtitleColor: Color {
+        if let accent {
+            return accent.opacity(isHovered ? 0.7 : 0.55)
+        }
+        return .white.opacity(isHovered ? 0.35 : 0.2)
+    }
+
+    private var backgroundColor: Color {
+        if let accent {
+            return accent.opacity(isPressed ? 0.20 : isHovered ? 0.16 : 0.12)
+        }
+        return Color.white.opacity(isPressed ? 0.07 : isHovered ? 0.04 : 0)
+    }
+
+    private var borderColor: Color {
+        if let accent {
+            return accent.opacity(isHovered ? 0.50 : 0.35)
+        }
+        return Color.white.opacity(isHovered ? 0.18 : 0.07)
+    }
 
     var body: some View {
         Button(action: action) {
@@ -325,18 +364,18 @@ struct ActionButton: View {
                 Text(label)
                     .font(.custom("Instrument Sans", size: 12))
                     .fontWeight(.semibold)
-                    .foregroundColor(.white.opacity(isHovered ? 0.6 : 0.35))
+                    .foregroundColor(labelColor)
                 if let subtitle {
                     Text(subtitle)
                         .font(.custom("Instrument Sans", size: 9))
-                        .foregroundColor(.white.opacity(isHovered ? 0.35 : 0.2))
+                        .foregroundColor(subtitleColor)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 44)
-            .background(Color.white.opacity(isPressed ? 0.07 : isHovered ? 0.04 : 0))
+            .background(backgroundColor)
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.white.opacity(isHovered ? 0.18 : 0.07), lineWidth: 1)
+                    .stroke(borderColor, lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .scaleEffect(isPressed ? 0.95 : isHovered ? 1.03 : 1)
