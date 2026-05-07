@@ -6,8 +6,6 @@ final class AlertScheduler {
     private var timers: [String: Timer] = [:]
     private var knownEvents: [String: UpcomingEvent] = [:]
 
-    static let gracePeriod: TimeInterval = 5.0
-
     var scheduledEventIDs: Set<String> {
         Set(timers.keys)
     }
@@ -61,21 +59,28 @@ final class AlertScheduler {
     private func scheduleTimer(for event: UpcomingEvent) {
         timers[event.id]?.invalidate()
 
-        let now = Date()
-        let leadTime = TimeInterval(settings.leadTimeSeconds)
-        let fireDate = event.startDate.addingTimeInterval(-leadTime)
-        let timeSinceStart = now.timeIntervalSince(event.startDate)
-
-        // Event already started beyond grace period — skip
-        if timeSinceStart > Self.gracePeriod {
+        // If the meeting has already ended, drop the alert entirely. We still
+        // fire for events that are ongoing (started but not yet ended), e.g.
+        // when the app launches mid-meeting or wakes from sleep mid-meeting.
+        if Date() >= event.endDate {
             timers.removeValue(forKey: event.id)
             return
         }
 
+        let now = Date()
+        let leadTime = TimeInterval(settings.leadTimeSeconds)
+        let fireDate = event.startDate.addingTimeInterval(-leadTime)
         let delay = max(0.01, fireDate.timeIntervalSince(now))
+
         let timer = makeMainRunLoopTimer(after: delay) { [weak self] in
-            self?.onAlert(event)
-            self?.timers.removeValue(forKey: event.id)
+            guard let self else { return }
+            // Re-check at fire time. The timer may have been delayed (sleep,
+            // blocked run loop, etc.) past the meeting's endDate; in that
+            // case the alert is no longer useful — suppress it.
+            if Date() < event.endDate {
+                self.onAlert(event)
+            }
+            self.timers.removeValue(forKey: event.id)
         }
         timers[event.id] = timer
     }
