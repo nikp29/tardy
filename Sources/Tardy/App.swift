@@ -35,9 +35,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, CalendarServiceDelegate {
 
     // MARK: - CalendarServiceDelegate
 
-    func calendarService(_ service: CalendarService, didUpdateEvents events: [UpcomingEvent]) {
+    func calendarService(
+        _ service: CalendarService,
+        didUpdateEvents events: [UpcomingEvent],
+        forceReschedule: Bool
+    ) {
         DispatchQueue.main.async { [weak self] in
-            self?.alertScheduler.updateEvents(events)
+            self?.alertScheduler.updateEvents(events, forceReschedule: forceReschedule)
 
             let nextEvent = events
                 .filter { $0.startDate > Date() }
