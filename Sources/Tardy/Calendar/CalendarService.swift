@@ -3,7 +3,11 @@ import EventKit
 import Foundation
 
 protocol CalendarServiceDelegate: AnyObject {
-    func calendarService(_ service: CalendarService, didUpdateEvents events: [UpcomingEvent])
+    func calendarService(
+        _ service: CalendarService,
+        didUpdateEvents events: [UpcomingEvent],
+        forceReschedule: Bool
+    )
 }
 
 final class CalendarService {
@@ -86,22 +90,30 @@ final class CalendarService {
     }
 
     @objc private func didWake(_ notification: Notification) {
-        fetchAndNotify()
+        // Kernel-based timers don't advance during sleep, so any pre-existing
+        // timer fire date may have drifted relative to wall-clock time.
+        // Force a full recompute so timers are recreated against `Date()` now.
+        fetchAndNotify(forceReschedule: true)
     }
 
     @objc private func timezoneOrDayChanged(_ notification: Notification) {
         midnightTimer?.invalidate()
         midnightTimer = nil
         scheduleMidnightRollover()
-        fetchAndNotify()
+        // Day rollover and timezone changes can shift effective fire times
+        // relative to wall clock; recompute everything.
+        fetchAndNotify(forceReschedule: true)
     }
 
     // MARK: - Polling
 
     private func startPolling() {
-        pollTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 300, repeats: true) { [weak self] _ in
             self?.fetchAndNotify()
         }
+        timer.tolerance = 30
+        RunLoop.main.add(timer, forMode: .common)
+        pollTimer = timer
     }
 
     // MARK: - Midnight rollover
@@ -111,28 +123,39 @@ final class CalendarService {
         guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date()),
               let midnight = calendar.dateInterval(of: .day, for: tomorrow)?.start else { return }
 
-        let interval = midnight.timeIntervalSinceNow
-        midnightTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
-            self?.fetchAndNotify()
+        let interval = max(1, midnight.timeIntervalSinceNow)
+        let timer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
+            self?.fetchAndNotify(forceReschedule: true)
             self?.scheduleMidnightRollover()
         }
+        // Allow up to 5s of OS-level coalescing; midnight rollover doesn't need ms precision.
+        timer.tolerance = 5
+        RunLoop.main.add(timer, forMode: .common)
+        midnightTimer = timer
     }
 
     // MARK: - Fetching
 
-    func fetchAndNotify() {
+    /// We fetch a rolling 26-hour window rather than just "the rest of today".
+    /// Reasons:
+    ///  * If the app launches at 11:55pm with a meeting at 12:05am, we still see it.
+    ///  * If the midnight-rollover timer is delayed (sleeping Mac, busy run loop),
+    ///    we already have tomorrow's first events scheduled.
+    ///  * 26h (rather than 24h) gives a small safety margin around the boundary.
+    static let fetchWindowSeconds: TimeInterval = 26 * 3600
+
+    func fetchAndNotify(forceReschedule: Bool = false) {
         store.refreshSourcesIfNecessary()
-        let events = fetchTodayEvents()
+        let events = fetchUpcomingEvents()
         currentEvents = events
-        delegate?.calendarService(self, didUpdateEvents: events)
+        delegate?.calendarService(self, didUpdateEvents: events, forceReschedule: forceReschedule)
     }
 
-    private func fetchTodayEvents() -> [UpcomingEvent] {
-        let calendar = Calendar.current
+    private func fetchUpcomingEvents() -> [UpcomingEvent] {
         let now = Date()
-        let endOfDay = calendar.dateInterval(of: .day, for: now)?.end ?? now.addingTimeInterval(86400)
+        let end = now.addingTimeInterval(Self.fetchWindowSeconds)
 
-        let predicate = store.predicateForEvents(withStart: now, end: endOfDay, calendars: nil)
+        let predicate = store.predicateForEvents(withStart: now, end: end, calendars: nil)
         let ekEvents = store.events(matching: predicate)
 
         let filtered = ekEvents.filter { event in

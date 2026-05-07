@@ -2,6 +2,20 @@ import Testing
 import Foundation
 @testable import Tardy
 
+/// Tiny thread-safe counter for use across threads in tests.
+final class LockedCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _value = 0
+    var value: Int {
+        lock.lock(); defer { lock.unlock() }
+        return _value
+    }
+    func increment() {
+        lock.lock(); defer { lock.unlock() }
+        _value += 1
+    }
+}
+
 @Suite("AlertScheduler")
 struct AlertSchedulerTests {
 
@@ -123,5 +137,48 @@ struct AlertSchedulerTests {
         try await Task.sleep(for: .milliseconds(300))
         RunLoop.main.run(until: Date().addingTimeInterval(0.1))
         #expect(firedEvents.count == 1)
+    }
+
+    @Test("timer scheduled from a background thread still fires (proves it's attached to RunLoop.main)")
+    func firesWhenScheduledOffMain() async throws {
+        // Real-world case: EKEventStoreChanged notifications and similar can deliver
+        // on background threads. `Timer.scheduledTimer(...)` attaches to the *current*
+        // thread's run loop, which on a background thread is not running and never
+        // ticks — so the alert never fires. Explicitly adding to RunLoop.main fixes it.
+        let settings = SettingsManager(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!)
+        settings.leadTimeSeconds = 60
+        let firedCount = LockedCounter()
+        let scheduler = AlertScheduler(settings: settings) { _ in firedCount.increment() }
+
+        let event = makeEvent(startDate: Date().addingTimeInterval(10))
+        await Task.detached {
+            // Definitely not on main here.
+            scheduler.updateEvents([event])
+        }.value
+
+        try await Task.sleep(for: .milliseconds(200))
+        RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+        #expect(firedCount.value == 1, "Timer scheduled from a background thread must still fire")
+    }
+
+    @Test("forceReschedule recomputes timers even when event hasn't changed (wake from sleep)")
+    func forceRescheduleAfterWake() {
+        // Simulates wake-from-sleep: the kernel timer drifted while asleep, so the
+        // pre-existing Timer instance will fire late. updateEvents normally skips
+        // rescheduling when an event hasn't changed; we need an explicit way to
+        // force a recompute against current wall-clock time.
+        let settings = SettingsManager(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!)
+        settings.leadTimeSeconds = 60
+        let scheduler = AlertScheduler(settings: settings) { _ in }
+
+        let event = makeEvent(startDate: Date().addingTimeInterval(600))
+        scheduler.updateEvents([event])
+        #expect(scheduler.scheduledEventIDs.contains("e1"))
+
+        // Capture current timer and confirm forceReschedule swaps it out.
+        let before = ObjectIdentifier(scheduler.timerForTesting(eventID: "e1")!)
+        scheduler.updateEvents([event], forceReschedule: true)
+        let after = ObjectIdentifier(scheduler.timerForTesting(eventID: "e1")!)
+        #expect(before != after, "Timer must be replaced when forceReschedule=true")
     }
 }

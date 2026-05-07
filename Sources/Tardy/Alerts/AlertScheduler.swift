@@ -17,7 +17,7 @@ final class AlertScheduler {
         self.onAlert = onAlert
     }
 
-    func updateEvents(_ events: [UpcomingEvent]) {
+    func updateEvents(_ events: [UpcomingEvent], forceReschedule: Bool = false) {
         // Use last-wins to handle duplicate event IDs from EventKit
         let newEventsByID = Dictionary(events.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
 
@@ -29,7 +29,9 @@ final class AlertScheduler {
 
         // Schedule or reschedule timers
         for event in events {
-            if let existing = knownEvents[event.id], !existing.hasChanged(comparedTo: event) {
+            if !forceReschedule,
+               let existing = knownEvents[event.id],
+               !existing.hasChanged(comparedTo: event) {
                 continue
             }
             scheduleTimer(for: event)
@@ -38,8 +40,13 @@ final class AlertScheduler {
         knownEvents = newEventsByID
     }
 
+    /// Test-only accessor for verifying scheduled timer identity.
+    func timerForTesting(eventID: String) -> Timer? {
+        timers[eventID]
+    }
+
     func snooze(event: UpcomingEvent, duration: TimeInterval = 120) {
-        let timer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
+        let timer = makeMainRunLoopTimer(after: duration) { [weak self] in
             self?.onAlert(event)
         }
         timers["snooze-\(event.id)-\(Date().timeIntervalSince1970)"] = timer
@@ -65,21 +72,33 @@ final class AlertScheduler {
             return
         }
 
-        let delay = fireDate.timeIntervalSince(now)
-
-        if delay <= 0 {
-            // Fire immediately (fire date already passed but event within grace period or not started)
-            let timer = Timer.scheduledTimer(withTimeInterval: 0.01, repeats: false) { [weak self] _ in
-                self?.onAlert(event)
-                self?.timers.removeValue(forKey: event.id)
-            }
-            timers[event.id] = timer
-        } else {
-            let timer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
-                self?.onAlert(event)
-                self?.timers.removeValue(forKey: event.id)
-            }
-            timers[event.id] = timer
+        let delay = max(0.01, fireDate.timeIntervalSince(now))
+        let timer = makeMainRunLoopTimer(after: delay) { [weak self] in
+            self?.onAlert(event)
+            self?.timers.removeValue(forKey: event.id)
         }
+        timers[event.id] = timer
+    }
+
+    /// Creates a one-shot Timer attached to RunLoop.main in `.common` mode.
+    ///
+    /// Why this matters:
+    /// 1. `Timer.scheduledTimer(...)` attaches to the *current* thread's run loop.
+    ///    On a background thread there is no running run loop, so the timer
+    ///    silently never fires. This caused intermittent missed notifications.
+    /// 2. The default mode (`.default`) is *not* active while AppKit modal tracking
+    ///    is in progress (e.g. while the user has the menu bar menu open).
+    ///    `.common` is the meta-mode that includes `.default`, `.eventTracking`,
+    ///    and `.modalPanel`, so the timer fires regardless of UI state.
+    private func makeMainRunLoopTimer(
+        after delay: TimeInterval,
+        action: @escaping () -> Void
+    ) -> Timer {
+        let timer = Timer(timeInterval: delay, repeats: false) { _ in action() }
+        // tolerance helps the OS coalesce timers; for a one-minute lead time,
+        // 100ms tolerance is imperceptible and reduces wake load.
+        timer.tolerance = min(0.1, delay / 10)
+        RunLoop.main.add(timer, forMode: .common)
+        return timer
     }
 }
