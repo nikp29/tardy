@@ -10,8 +10,13 @@ final class SettingsManager {
 
     var leadTimeSeconds: Int {
         get {
-            let value = defaults.integer(forKey: Self.leadTimeKey)
-            return Self.validLeadTimes.contains(value) ? value : 60
+            // If the key has never been written, default to 60s.
+            // `defaults.integer(forKey:)` returns 0 for both "unset" and "explicitly 0",
+            // so we must probe `object(forKey:)` to distinguish them.
+            guard let raw = defaults.object(forKey: Self.leadTimeKey) as? Int else {
+                return 60
+            }
+            return Self.validLeadTimes.contains(raw) ? raw : 60
         }
         set {
             if Self.validLeadTimes.contains(newValue) {
