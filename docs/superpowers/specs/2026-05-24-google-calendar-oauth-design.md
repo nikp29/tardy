@@ -258,6 +258,21 @@ required** (that applies to restricted scopes like Gmail).
 - Add `GoogleSignIn-iOS` (SwiftPM; supports macOS) to `Package.swift`. Single
   focused dependency for auth only. No `GoogleAPIClientForREST`.
 
+## Local Tooling (for implementation)
+
+- **`gws` (Google Workspace CLI)** — authenticated as `nikp29@gmail.com`, full
+  Calendar API access. Use during development to inspect real event JSON
+  (`gws calendar events list`, `gws calendar +agenda`) and confirm
+  `conferenceData` / `iCalUID` shapes before writing the Codable models and
+  de-dup logic.
+- **`gcloud`** — installed at `~/google-cloud-sdk/bin/gcloud` but its bundled
+  Python is too old; it only loads with
+  `CLOUDSDK_PYTHON="$(command -v python3.14)"`. Authenticated as
+  `nikp29@gmail.com`, active project `my-project-1564602150265`. Use it to
+  enable the Calendar API and manage the project. Note: consumer OAuth client
+  IDs + consent-screen branding are generally created in the Google Cloud
+  Console (Auth Platform), not via `gcloud`, so that step stays manual.
+
 ## Rollout / Sequencing
 
 1. Refactor `CalendarService` → `EventCoordinator` + `EventKitProvider` (no
