@@ -12,15 +12,13 @@ echo "Building Tardy v$VERSION..."
 swift build -c release 2>&1
 
 # Find the built binary
-BINARY=$(swift build -c release --show-bin-path)/Tardy
+BIN_PATH=$(swift build -c release --show-bin-path)
+BINARY="$BIN_PATH/Tardy"
 
 if [ ! -f "$BINARY" ]; then
     echo "Error: Binary not found at $BINARY"
     exit 1
 fi
-
-# Find the resource bundle
-RESOURCE_BUNDLE=$(swift build -c release --show-bin-path)/Tardy_Tardy.bundle
 
 # Clean previous build
 rm -rf "$APP_BUNDLE"
@@ -32,10 +30,12 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 # Copy binary
 cp "$BINARY" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
-# Copy resource bundle into Contents/Resources
-if [ -d "$RESOURCE_BUNDLE" ]; then
-    cp -R "$RESOURCE_BUNDLE" "$APP_BUNDLE/Contents/Resources/"
-fi
+# Copy ALL SwiftPM resource bundles (Tardy's own plus dependencies like
+# GoogleSignIn, AppAuth, GTMSessionFetcher, GoogleUtilities) into Resources.
+# GoogleSignIn loads its bundle at runtime, so omitting these breaks sign-in.
+for bundle in "$BIN_PATH"/*.bundle; do
+    [ -d "$bundle" ] && cp -R "$bundle" "$APP_BUNDLE/Contents/Resources/"
+done
 
 # Copy app icon
 if [ -f "Sources/Tardy/Resources/AppIcon.icns" ]; then
