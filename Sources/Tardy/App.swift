@@ -2,10 +2,10 @@ import AppKit
 import Foundation
 import ServiceManagement
 
-class AppDelegate: NSObject, NSApplicationDelegate, CalendarServiceDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, EventCoordinatorDelegate {
     private let settings = SettingsManager()
     private let soundPlayer = SoundPlayer()
-    private var calendarService: CalendarService!
+    private var eventCoordinator: EventCoordinator!
     private var alertScheduler: AlertScheduler!
     private var alertWindowController = AlertWindowController()
     private var menuBarController: MenuBarController!
@@ -23,9 +23,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, CalendarServiceDelegate {
             }
         }
 
-        calendarService = CalendarService()
-        calendarService.delegate = self
-        calendarService.start()
+        eventCoordinator = EventCoordinator(providers: [EventKitProvider()])
+        eventCoordinator.delegate = self
+        eventCoordinator.start()
 
         if !UserDefaults.standard.bool(forKey: "hasLaunchedBefore") {
             UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
@@ -35,8 +35,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, CalendarServiceDelegate {
 
     // MARK: - CalendarServiceDelegate
 
-    func calendarService(
-        _ service: CalendarService,
+    func eventCoordinator(
+        _ coordinator: EventCoordinator,
         didUpdateEvents events: [UpcomingEvent],
         forceReschedule: Bool
     ) {
