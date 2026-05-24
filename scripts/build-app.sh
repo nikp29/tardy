@@ -72,6 +72,17 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
     <string>AppIcon</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>GIDClientID</key>
+    <string>321723434454-cdfv8p0ue662dgms5cbq35gm1n6fagqo.apps.googleusercontent.com</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>com.googleusercontent.apps.321723434454-cdfv8p0ue662dgms5cbq35gm1n6fagqo</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>
 EOF
@@ -86,8 +97,27 @@ echo "Built: $APP_BUNDLE"
 echo "Version: $VERSION"
 echo ""
 
-# Create tarball for distribution
+# Create tarball for distribution (consumed by the Homebrew cask)
 TARBALL="$BUILD_DIR/Tardy-$VERSION.tar.gz"
 (cd "$BUILD_DIR" && tar -czf "Tardy-$VERSION.tar.gz" "$APP_NAME.app")
 echo "Tarball: $TARBALL"
 echo "SHA256: $(shasum -a 256 "$TARBALL" | cut -d' ' -f1)"
+
+# Create DMG for direct download from the website (drag Tardy.app → Applications).
+# Stable filename so https://github.com/nikp29/tardy/releases/latest/download/Tardy.dmg
+# always resolves to the newest release.
+DMG="$BUILD_DIR/Tardy.dmg"
+DMG_STAGING="$BUILD_DIR/dmg-staging"
+rm -rf "$DMG_STAGING" "$DMG"
+mkdir -p "$DMG_STAGING"
+cp -R "$APP_BUNDLE" "$DMG_STAGING/"
+ln -s /Applications "$DMG_STAGING/Applications"
+hdiutil create \
+    -volname "$APP_NAME" \
+    -srcfolder "$DMG_STAGING" \
+    -fs HFS+ \
+    -ov -format UDZO \
+    "$DMG"
+rm -rf "$DMG_STAGING"
+echo "DMG: $DMG"
+echo "DMG SHA256: $(shasum -a 256 "$DMG" | cut -d' ' -f1)"
