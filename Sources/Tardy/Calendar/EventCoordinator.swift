@@ -9,6 +9,7 @@ final class EventCoordinator {
     private let providers: [EventProvider]
     private var pollTimer: Timer?
     private var midnightTimer: Timer?
+    private var nearTermTimer: Timer?
 
     weak var delegate: EventCoordinatorDelegate?
 
@@ -30,6 +31,7 @@ final class EventCoordinator {
     func stop() {
         pollTimer?.invalidate(); pollTimer = nil
         midnightTimer?.invalidate(); midnightTimer = nil
+        nearTermTimer?.invalidate(); nearTermTimer = nil
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
@@ -45,7 +47,9 @@ final class EventCoordinator {
                 groups.append(await provider.fetchEvents(start: now, end: end))
             }
             let merged = EventDeduplicator.merge(groups)
+            let nextStart = merged.first(where: { $0.startDate > Date() })?.startDate
             await MainActor.run {
+                self.armNearTermTimer(nextStart: nextStart)
                 self.delegate?.eventCoordinator(self, didUpdateEvents: merged, forceReschedule: forceReschedule)
             }
         }
@@ -68,6 +72,26 @@ final class EventCoordinator {
         midnightTimer?.invalidate(); midnightTimer = nil
         scheduleMidnightRollover()
         refresh(forceReschedule: true)
+    }
+
+    // MARK: - Adaptive near-term polling
+
+    /// Returns the polling interval (seconds) to use when the next event is
+    /// imminent, or nil when no tight polling is needed.
+    static func nearTermPollInterval(nextStart: Date?, now: Date) -> TimeInterval? {
+        guard let nextStart else { return nil }
+        let delta = nextStart.timeIntervalSince(now)
+        guard delta > 0, delta <= 5 * 60 else { return nil }
+        return 30
+    }
+
+    private func armNearTermTimer(nextStart: Date?) {
+        nearTermTimer?.invalidate(); nearTermTimer = nil
+        guard let interval = Self.nearTermPollInterval(nextStart: nextStart, now: Date()) else { return }
+        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in self?.refresh() }
+        timer.tolerance = 2
+        RunLoop.main.add(timer, forMode: .common)
+        nearTermTimer = timer
     }
 
     // MARK: - Timers
