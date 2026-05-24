@@ -33,21 +33,33 @@ final class GoogleCalendarProvider: EventProvider {
 
     func fetchEvents(start: Date, end: Date) async -> [UpcomingEvent] {
         guard isEnabled else { return [] }
+
+        let calendars: [String]
         do {
-            let calendars = try await api.calendarIDs()
-            var result: [UpcomingEvent] = []
-            for cal in calendars {
-                result.append(contentsOf: try await fetchCalendar(cal, start: start, end: end))
-            }
-            return result
+            calendars = try await api.calendarIDs()
         } catch GoogleCalendarAPIError.unauthorized, GoogleAuthError.needsReauth {
             onNeedsReauth?()
             return []
         } catch {
-            // Transient: caller keeps last-known events.
-            print("Tardy: Google fetch error: \(error)")
+            NSLog("Tardy: Google calendarList error: \(error)")
             return []
         }
+
+        // Fetch each calendar independently. A single failing calendar (e.g. a
+        // shared/holiday calendar that errors) must NOT wipe out the others.
+        var result: [UpcomingEvent] = []
+        for cal in calendars {
+            do {
+                result.append(contentsOf: try await fetchCalendar(cal, start: start, end: end))
+            } catch GoogleCalendarAPIError.unauthorized, GoogleAuthError.needsReauth {
+                onNeedsReauth?()
+                return result
+            } catch {
+                NSLog("Tardy: Google events error for calendar \(cal): \(error)")
+                continue
+            }
+        }
+        return result
     }
 
     private func fetchCalendar(_ cal: String, start: Date, end: Date) async throws -> [UpcomingEvent] {

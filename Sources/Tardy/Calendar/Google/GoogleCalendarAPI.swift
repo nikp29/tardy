@@ -29,10 +29,14 @@ final class GoogleCalendarAPI {
     /// performs an incremental sync instead (timeMin/timeMax/orderBy omitted, per
     /// API rules — those params are incompatible with syncToken).
     func events(calendarID: String, start: Date, end: Date, syncToken: String?) async throws -> GoogleEventsResponse {
-        let encodedID = calendarID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? calendarID
-        var comps = URLComponents(
-            url: base.appendingPathComponent("calendars/\(encodedID)/events"),
-            resolvingAgainstBaseURL: false)!
+        // Encode the calendar ID as a single path segment. Calendar IDs contain
+        // '@' and sometimes '#' (e.g. en.usa#holiday@...), which must be escaped.
+        // Build the URL string directly (appendingPathComponent would re-encode
+        // the '%' and double-escape).
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        let encodedID = calendarID.addingPercentEncoding(withAllowedCharacters: allowed) ?? calendarID
+        var comps = URLComponents(string: base.absoluteString + "calendars/\(encodedID)/events")!
         var q = [
             URLQueryItem(name: "singleEvents", value: "true"),
             URLQueryItem(name: "maxResults", value: "250"),

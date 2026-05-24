@@ -50,9 +50,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, EventCoordinatorDelegate {
 
         eventCoordinator = EventCoordinator(providers: [EventKitProvider(), googleProvider])
         eventCoordinator.delegate = self
+        // Start polling immediately so EventKit isn't gated on Google's session
+        // restore (which may be slow or prompt for Keychain access). Once the
+        // Google session is restored, re-poll to pick up its events.
+        eventCoordinator.start()
         Task { @MainActor in
             await googleAuth.restorePreviousSignIn()
-            eventCoordinator.start()
+            eventCoordinator.refresh(forceReschedule: true)
         }
 
         if !UserDefaults.standard.bool(forKey: "hasLaunchedBefore") {
