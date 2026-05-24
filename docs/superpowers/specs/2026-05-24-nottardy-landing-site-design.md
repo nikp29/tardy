@@ -48,7 +48,7 @@ reviewers and good Lighthouse scores want.
 | Code location | **Separate repo `nottardy-site`** in `~/Documents/Programming` | Clean separation from the Swift app; direct Vercel git deploys; no Swift/web tooling mix |
 | Tech stack | **Astro + Tailwind** | Static-first, ~0 KB JS baseline, component reuse, Markdown for the privacy page, best Lighthouse |
 | Visual direction | **C "Countdown Kinetic"** spine + the frosted takeover card (from direction A) for the product showcase | Leads with Tardy's signature live countdown; matches the app's real dark UI; hits "playful + sleek" together |
-| Demo video | Placeholder poster + play button now; real video recorded before launch | User records later; same asset basis as Google's required demo video |
+| Demo video | **Real 6.5s screen recording provided** — transcoded to MP4 (H.264) + WebM, muted, autoplay-loop, with a poster frame | User supplied a 2940×1912, 4.1 MB `.mov`; loops as the Demo section. Same asset basis as Google's required demo video |
 | Privacy policy copy | Drafted by user in Claude Cowork (legal plugin); site holds it in a content shell | User preference; prompt provided separately |
 | Contact email | `nikp29@gmail.com` | Listed on privacy page + Google consent screen |
 
@@ -87,7 +87,7 @@ nottardy-site/
     components/
       Nav.astro
       Hero.astro            ← the countdown hero (with a tiny client script, below)
-      DemoVideo.astro       ← poster + play button placeholder → swap to <video>/embed
+      DemoVideo.astro       ← autoplay-muted-loop <video> (MP4+WebM) with poster frame
       Features.astro        ← 6-card grid
       HowItWorks.astro      ← 3-step flow + trust/scope copy
       Download.astro        ← Homebrew block (copy button) + .dmg + GitHub
@@ -104,6 +104,19 @@ nottardy-site/
 `BaseLayout` owns the `<head>`, fonts, meta/OG tags, and the nav/footer chrome so both
 pages stay consistent. The privacy page is plain Markdown rendered into the same layout
 — so updating copy never touches component code.
+
+### Demo video asset pipeline
+
+The user-provided source (`~/Documents/Screen Recording 2026-05-24 at 12.38.28 PM.mov`,
+2940×1912, ~6.5s, 4.1 MB) is, at build/setup time, transcoded with **`ffmpeg`** (install
+via Homebrew; it is a one-time build tool, not a site dependency) into web sources placed
+in `public/`:
+- `demo.mp4` — H.264, audio stripped, downscaled to ~1600px wide, `-movflags +faststart`.
+- `demo.webm` — VP9, audio stripped, same width (smaller, modern browsers prefer it).
+- `demo-poster.jpg` — first frame, for instant render before the video paints.
+
+The `<video>` is `autoplay muted loop playsinline preload="metadata"` with `poster`. The
+clean-named transcoded files are committed to the repo; the original `.mov` is not.
 
 ### The only JavaScript on the site
 
@@ -122,9 +135,11 @@ keeps the JS baseline effectively nil and the site trivially crawlable.
    `00:45` countdown (DM Mono), **"Don't be tardy."**, one line on what Tardy is,
    primary **Download for Mac** + secondary `brew install --cask tardy`, and the
    lead-time chips (1 min / 30 sec / 15 sec / at start).
-3. **Demo video** — "See it in action": poster + play button placeholder now; swaps to a
-   ~20s loop of a real alert takeover firing + one-click join. (Same recording basis as
-   the Google-review demo video, which also shows the Google sign-in + scope in use.)
+3. **Demo video** — "See it in action": the provided 6.5s screen recording of a real
+   alert takeover, played as an autoplay-muted-loop `<video>` (MP4 + WebM sources,
+   `playsinline`, poster frame for instant load), framed in the dark UI. (Same recording
+   basis as the Google-review demo video, which additionally shows the Google sign-in +
+   scope in use — that fuller video is produced separately for the OAuth submission.)
 4. **Features** — 6-card grid: full-screen takeover · one-click join (Zoom/Meet/Teams/
    Webex) · **Google + macOS calendars** · phone dial-in detection · configurable
    timing · snooze + sounds + auto-launch.
@@ -174,15 +189,15 @@ These are required for launch/verification but are not part of building the site
 3. In the Google Cloud OAuth consent screen: set homepage `https://nottardy.app`,
    privacy policy `https://nottardy.app/privacy`, upload the app **logo**, write the
    **scope justification**, and submit the **demo video** (alert firing + Google consent
-   flow + scope in use).
-4. Record the demo video and drop it into the Demo section (replacing the placeholder).
-5. Draft the privacy policy in Claude Cowork (legal plugin) and paste into `privacy.md`.
+   flow + scope in use — a fuller recording than the homepage loop).
+4. Draft the privacy policy in Claude Cowork (legal plugin) and paste into `privacy.md`.
 
 ## Testing / Verification Strategy
 
 - `astro build` succeeds with no errors; `astro check` clean.
 - Local preview: both routes render; nav/footer links resolve; Homebrew copy button
-  works; download links point at the correct GitHub Release / `.dmg`.
+  works; download links point at the correct GitHub Release / `.dmg`; the demo video
+  autoplays muted, loops seamlessly, and shows the poster before paint.
 - Lighthouse (mobile + desktop): Performance, Accessibility, Best Practices, SEO all
   ≥ 95; confirm near-zero JS payload.
 - Responsive check at 375 / 768 / 1280 widths.
@@ -193,10 +208,11 @@ These are required for launch/verification but are not part of building the site
 ## Rollout / Sequencing
 
 1. Scaffold `nottardy-site` (Astro + Tailwind), `BaseLayout`, brand tokens, fonts, icon.
-2. Build homepage sections (Nav → Hero+countdown → DemoVideo placeholder → Features →
+2. Transcode the provided `.mov` → `demo.mp4` / `demo.webm` / `demo-poster.jpg` in
+   `public/` (ffmpeg).
+3. Build homepage sections (Nav → Hero+countdown → DemoVideo loop → Features →
    HowItWorks → Download → Footer) using the frontend-design skill.
-3. Build the `/privacy` shell; paste Cowork-drafted copy.
-4. Meta/OG/favicon/sitemap/robots; responsive + a11y pass; Lighthouse.
-5. Register domain via Vercel, deploy, verify in Search Console.
-6. Record demo video; swap into the Demo section.
+4. Build the `/privacy` shell; paste Cowork-drafted copy.
+5. Meta/OG/favicon/sitemap/robots; responsive + a11y pass; Lighthouse.
+6. Register domain via Vercel, deploy, verify in Search Console.
 7. Submit Google OAuth verification (Gate 2 of the OAuth spec).
