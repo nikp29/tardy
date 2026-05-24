@@ -1,16 +1,32 @@
 import SwiftUI
 
+/// View-model for the Google Calendar connection section. The owning controller
+/// sets `onConnect`/`onDisconnect` (which run the SDK flow) and updates the
+/// published state; the view only reads state and invokes the closures. All
+/// access happens on the main thread (SwiftUI actions + the sign-in Task).
+final class GoogleConnectionModel: ObservableObject {
+    @Published var email: String?
+    @Published var isConnecting = false
+    @Published var needsReauth = false
+    var onConnect: (() -> Void)?
+    var onDisconnect: (() -> Void)?
+
+    init(email: String?) { self.email = email }
+}
+
 struct SettingsView: View {
     let settings: SettingsManager
     let soundPlayer: SoundPlayer
+    @ObservedObject var google: GoogleConnectionModel
 
     @State private var selectedLeadTime: Int
     @State private var selectedSound: AlertSound
     @State private var launchOnLogin: Bool
 
-    init(settings: SettingsManager, soundPlayer: SoundPlayer) {
+    init(settings: SettingsManager, soundPlayer: SoundPlayer, google: GoogleConnectionModel) {
         self.settings = settings
         self.soundPlayer = soundPlayer
+        self.google = google
         _selectedLeadTime = State(initialValue: settings.leadTimeSeconds)
         _selectedSound = State(initialValue: settings.alertSound)
         _launchOnLogin = State(initialValue: settings.launchOnLogin)
@@ -58,6 +74,53 @@ struct SettingsView: View {
                                 soundPlayer.play(sound)
                             }
                         )
+                    }
+                }
+            }
+
+            settingsDivider
+
+            settingsSection("GOOGLE CALENDAR") {
+                VStack(alignment: .leading, spacing: 8) {
+                    if let email = google.email {
+                        HStack {
+                            Text(email)
+                                .font(.custom("Instrument Sans", size: 13))
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white.opacity(0.7))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Spacer()
+                            Button(action: { google.onDisconnect?() }) {
+                                Text("Disconnect")
+                                    .font(.custom("Instrument Sans", size: 12))
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(Color(red: 248/255, green: 113/255, blue: 113/255).opacity(0.9))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        if google.needsReauth {
+                            Text("Session expired — reconnect to keep Google events.")
+                                .font(.custom("Instrument Sans", size: 11))
+                                .foregroundColor(Color(red: 251/255, green: 191/255, blue: 36/255).opacity(0.9))
+                        }
+                    } else {
+                        Button(action: { google.onConnect?() }) {
+                            Text(google.isConnecting ? "Connecting…" : "Connect Google Account")
+                                .font(.custom("Instrument Sans", size: 13))
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color(red: 147/255, green: 197/255, blue: 253/255).opacity(0.95))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(Color(red: 59/255, green: 130/255, blue: 246/255).opacity(0.2))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .stroke(Color(red: 59/255, green: 130/255, blue: 246/255).opacity(0.25), lineWidth: 1)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(google.isConnecting)
                     }
                 }
             }
