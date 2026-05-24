@@ -38,4 +38,27 @@ struct UpcomingEventTests {
         let b = UpcomingEvent(id: "1", title: "A", startDate: now.addingTimeInterval(600), endDate: now, location: nil, conferenceURL: nil, phoneNumber: nil, notes: nil)
         #expect(a.hasChanged(comparedTo: b) == true)
     }
+
+    @Test("source defaults to eventKit and iCalUID defaults to nil")
+    func sourceAndICalUIDDefaults() {
+        let e = UpcomingEvent(
+            id: "e1", title: "T",
+            startDate: Date(), endDate: Date().addingTimeInterval(60),
+            location: nil, conferenceURL: nil, phoneNumber: nil, notes: nil
+        )
+        #expect(e.source == .eventKit)
+        #expect(e.iCalUID == nil)
+    }
+
+    @Test("source and iCalUID are stored when provided")
+    func sourceAndICalUIDStored() {
+        let e = UpcomingEvent(
+            id: "e1", title: "T",
+            startDate: Date(), endDate: Date().addingTimeInterval(60),
+            location: nil, conferenceURL: nil, phoneNumber: nil, notes: nil,
+            source: .google, iCalUID: "abc@google.com"
+        )
+        #expect(e.source == .google)
+        #expect(e.iCalUID == "abc@google.com")
+    }
 }
