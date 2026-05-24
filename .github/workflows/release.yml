@@ -21,19 +21,20 @@ jobs:
       - name: Build app bundle
         run: bash scripts/build-app.sh "${{ steps.version.outputs.version }}"
 
-      - name: Create or update release, then upload tarball
+      - name: Create or update release, then upload assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ github.ref_name }}"
           TARBALL=".build/app/Tardy-${{ steps.version.outputs.version }}.tar.gz"
+          DMG=".build/app/Tardy.dmg"
 
           # If the release was created from GitHub web/mobile UI before this
           # workflow ran, `gh release create` would fail. Instead: ensure a
           # release exists for this tag, then upload the asset (overwriting
           # any previous upload from a re-run).
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists — uploading asset to it."
+            echo "Release $TAG already exists — uploading assets to it."
           else
             echo "No release for $TAG yet — creating one."
             gh release create "$TAG" \
@@ -41,7 +42,9 @@ jobs:
               --generate-notes
           fi
 
-          gh release upload "$TAG" "$TARBALL" --clobber
+          # Tarball feeds the Homebrew cask; the stable-named DMG feeds the
+          # website's "Download .dmg" button (releases/latest/download/Tardy.dmg).
+          gh release upload "$TAG" "$TARBALL" "$DMG" --clobber
 
       - name: Update Homebrew cask
         env:
