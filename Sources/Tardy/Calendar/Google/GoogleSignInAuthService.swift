@@ -10,7 +10,13 @@ final class GoogleSignInAuthService: GoogleAuthProviding {
     private var signIn: GIDSignIn { GIDSignIn.sharedInstance }
 
     init() {
-        signIn.configuration = GIDConfiguration(clientID: GoogleOAuthConfig.clientID)
+        // The client ID lives in the app's Info.plist (GIDClientID), injected
+        // from .env by build-app.sh. GoogleSignIn can auto-read it, but we set
+        // it explicitly when present to be unambiguous.
+        if let clientID = Bundle.main.object(forInfoDictionaryKey: "GIDClientID") as? String,
+           !clientID.isEmpty {
+            signIn.configuration = GIDConfiguration(clientID: clientID)
+        }
     }
 
     var isSignedIn: Bool { signIn.currentUser != nil }

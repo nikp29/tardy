@@ -26,6 +26,7 @@ Package.resolved
 
 # Credentials
 .netrc
+.env
 
 # Superpowers
 .superpowers/
