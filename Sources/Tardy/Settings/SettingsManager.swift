@@ -5,6 +5,7 @@ final class SettingsManager {
     private static let leadTimeKey = "alertLeadTimeSeconds"
     private static let alertSoundKey = "alertSound"
     private static let launchOnLoginKey = "launchOnLogin"
+    private static let googleEnabledKey = "googleCalendarEnabled"
 
     private let defaults: UserDefaults
 
@@ -48,6 +49,11 @@ final class SettingsManager {
         set {
             defaults.set(newValue, forKey: Self.launchOnLoginKey)
         }
+    }
+
+    var googleCalendarEnabled: Bool {
+        get { defaults.bool(forKey: Self.googleEnabledKey) } // defaults to false
+        set { defaults.set(newValue, forKey: Self.googleEnabledKey) }
     }
 
     init(defaults: UserDefaults = .standard) {

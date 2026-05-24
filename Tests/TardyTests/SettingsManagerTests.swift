@@ -65,4 +65,12 @@ struct SettingsManagerTests {
         let manager2 = SettingsManager(defaults: defaults)
         #expect(manager2.launchOnLogin == false)
     }
+
+    @Test("googleCalendarEnabled defaults to false and round-trips")
+    func googleCalendarEnabledFlag() {
+        let s = SettingsManager(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!)
+        #expect(s.googleCalendarEnabled == false)
+        s.googleCalendarEnabled = true
+        #expect(s.googleCalendarEnabled == true)
+    }
 }
