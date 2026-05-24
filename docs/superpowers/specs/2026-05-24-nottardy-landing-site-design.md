@@ -85,14 +85,13 @@ nottardy-site/
     layouts/
       BaseLayout.astro      ← <head>, fonts, meta/OG, theme shell, nav + footer slots
     components/
-      Nav.astro
+      Nav.astro             ← brand + GitHub link + Download button (only)
       Hero.astro            ← the countdown hero (with a tiny client script, below)
       DemoVideo.astro       ← autoplay-muted-loop <video> (MP4+WebM) with poster frame
-      Features.astro        ← 6-card grid
-      HowItWorks.astro      ← 3-step flow + trust/scope copy
+      Connections.astro     ← macOS Calendar (available) + Google Calendar (coming soon) + trust/scope copy
       Download.astro        ← Homebrew block (copy button) + .dmg + GitHub
       Footer.astro
-      TakeoverCard.astro    ← reusable frosted "meeting takeover" card (from direction A)
+      TakeoverCard.astro    ← reusable frosted "meeting takeover" card (also used in the Hero / demo)
     pages/
       index.astro           ← composes the homepage sections
       privacy.md (or .mdx)  ← privacy policy content shell (BaseLayout)
@@ -129,29 +128,39 @@ keeps the JS baseline effectively nil and the site trivially crawlable.
 
 ### Homepage (`/`)
 
-1. **Nav** — `not`tardy wordmark; links: Features, How it works, Download, GitHub ↗;
-   a primary **Download** button.
-2. **Hero** — uppercase mono context label ("your 2:00 standup"), the giant glowing
-   `00:45` countdown (DM Mono), **"Don't be tardy."**, one line on what Tardy is,
-   primary **Download for Mac** + secondary `brew install --cask tardy`, and the
-   lead-time chips (1 min / 30 sec / 15 sec / at start).
-3. **Demo video** — "See it in action": the provided 6.5s screen recording of a real
-   alert takeover, played as an autoplay-muted-loop `<video>` (MP4 + WebM sources,
-   `playsinline`, poster frame for instant load), framed in the dark UI. (Same recording
-   basis as the Google-review demo video, which additionally shows the Google sign-in +
-   scope in use — that fuller video is produced separately for the OAuth submission.)
-4. **Features** — 6-card grid: full-screen takeover · one-click join (Zoom/Meet/Teams/
-   Webex) · **Google + macOS calendars** · phone dial-in detection · configurable
-   timing · snooze + sounds + auto-launch.
-5. **How it works** — 3 steps (connect Google &/or macOS Calendar → Tardy reads upcoming
-   events → takeover fires before each one). Doubles as the **trust / scope** section:
-   "read-only, never leaves your device," supporting Google's scope justification and
-   linking to the privacy policy.
-6. **Download** — copyable Homebrew block (`brew tap nikp29/tardy` /
-   `brew install --cask tardy`), **Download .dmg** (latest GitHub Release), **View on
+1. **Nav** — `not`tardy wordmark; **only** a `GitHub ↗` link + a primary **Download**
+   button. Link text is high-contrast (`#d7dbf2`), not muted gray. Blurs on scroll.
+2. **Hero** — uppercase mono context label ("your 2:00 standup starts in"), the giant
+   glowing live `00:45` countdown (DM Mono, ticks + loops), **"Don't be tardy."**, one
+   line on what Tardy is, primary **Download for Mac** + secondary
+   `brew install --cask tardy`. **No lead-time chips.**
+3. **Demo** — "See it in action" / **"Never miss a meeting."**: the provided 6.5s screen
+   recording of a real alert takeover, played as an autoplay-muted-loop `<video>` (MP4 +
+   WebM sources, `playsinline`, poster frame for instant load), framed in the dark UI.
+   (Same recording basis as the Google-review demo video, which additionally shows the
+   Google sign-in + scope in use — that fuller video is produced separately for the OAuth
+   submission.)
+4. **Connections** — "Connect your calendar." Two cards with real product marks:
+   - **macOS Calendar** — badge **"Available now"**: works with any calendar in
+     Calendar.app (iCloud, Outlook, Exchange, and Google accounts added to the Mac).
+   - **Google Calendar** — badge **"Coming soon"** (pulsing dot): connect Google directly
+     inside Tardy, richer join links; "in review with Google now."
+   Below the cards, the **trust / scope** callout: "reads your events only to remind you;
+   your calendar data never leaves your device — no servers, no analytics," linking to the
+   privacy policy. This supports Google's scope justification.
+5. **Download** — "Free and open source." Copyable Homebrew block (`brew tap nikp29/tardy`
+   / `brew install --cask tardy`), **Download .dmg** (latest GitHub Release), **View on
    GitHub**; requirements (macOS 14 Sonoma+) and the Gatekeeper note (not yet notarized).
-7. **Footer** — wordmark; links: Privacy Policy, GitHub; "Not affiliated with Google";
+6. **Footer** — wordmark; links: Privacy Policy, GitHub; "Not affiliated with Google";
    copyright.
+
+> **"Coming soon" → "Available":** the Google Calendar badge/copy flips to available once
+> OAuth verification lands. Implemented as a single content flag/constant so it's a
+> one-line change, not a layout edit.
+
+> **Features section removed.** Per design review, individual capability cards (one-click
+> join, dial-in, timing, sounds) were cut to keep the page lean; the takeover demo +
+> Connections carry the story. Easy to reintroduce as a slim list later if wanted.
 
 ### Privacy policy (`/privacy`)
 
@@ -210,8 +219,8 @@ These are required for launch/verification but are not part of building the site
 1. Scaffold `nottardy-site` (Astro + Tailwind), `BaseLayout`, brand tokens, fonts, icon.
 2. Transcode the provided `.mov` → `demo.mp4` / `demo.webm` / `demo-poster.jpg` in
    `public/` (ffmpeg).
-3. Build homepage sections (Nav → Hero+countdown → DemoVideo loop → Features →
-   HowItWorks → Download → Footer) using the frontend-design skill.
+3. Build homepage sections (Nav → Hero+countdown → DemoVideo loop → Connections →
+   Download → Footer) using the frontend-design skill.
 4. Build the `/privacy` shell; paste Cowork-drafted copy.
 5. Meta/OG/favicon/sitemap/robots; responsive + a11y pass; Lighthouse.
 6. Register domain via Vercel, deploy, verify in Search Console.
