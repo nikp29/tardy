@@ -5,6 +5,8 @@ import ServiceManagement
 class AppDelegate: NSObject, NSApplicationDelegate, EventCoordinatorDelegate {
     private let settings = SettingsManager()
     private let soundPlayer = SoundPlayer()
+    private let googleAuth = GoogleSignInAuthService.shared
+    private var googleProvider: GoogleCalendarProvider!
     private var eventCoordinator: EventCoordinator!
     private var alertScheduler: AlertScheduler!
     private var alertWindowController = AlertWindowController()
@@ -14,7 +16,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, EventCoordinatorDelegate {
         FontRegistration.registerCustomFonts()
         configureLaunchOnLogin()
 
-        menuBarController = MenuBarController(settings: settings, soundPlayer: soundPlayer)
+        menuBarController = MenuBarController(
+            settings: settings,
+            soundPlayer: soundPlayer,
+            googleAuth: googleAuth,
+            onGoogleConnected: { [weak self] in
+                guard let self else { return }
+                self.settings.googleCalendarEnabled = true
+                self.googleProvider.setEnabled(true)
+                self.eventCoordinator.refresh(forceReschedule: true)
+            },
+            onGoogleDisconnected: { [weak self] in
+                guard let self else { return }
+                self.settings.googleCalendarEnabled = false
+                self.googleProvider.setEnabled(false)
+                self.eventCoordinator.refresh(forceReschedule: true)
+            },
+            onPollNow: { [weak self] in self?.eventCoordinator.refresh() }
+        )
         menuBarController.setup()
 
         alertScheduler = AlertScheduler(settings: settings) { [weak self] event in
@@ -23,9 +42,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, EventCoordinatorDelegate {
             }
         }
 
-        eventCoordinator = EventCoordinator(providers: [EventKitProvider()])
+        googleProvider = GoogleCalendarProvider(auth: googleAuth)
+        googleProvider.setEnabled(settings.googleCalendarEnabled)
+        googleProvider.onNeedsReauth = { [weak self] in
+            DispatchQueue.main.async { self?.menuBarController.setGoogleNeedsReauth(true) }
+        }
+
+        eventCoordinator = EventCoordinator(providers: [EventKitProvider(), googleProvider])
         eventCoordinator.delegate = self
-        eventCoordinator.start()
+        Task { @MainActor in
+            await googleAuth.restorePreviousSignIn()
+            eventCoordinator.start()
+        }
 
         if !UserDefaults.standard.bool(forKey: "hasLaunchedBefore") {
             UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
