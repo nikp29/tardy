@@ -6,6 +6,19 @@ BUILD_DIR=".build/app"
 APP_NAME="Tardy"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 
+# Load the Google OAuth client ID from .env (gitignored, kept out of source).
+# It's a public identifier, not a secret, but lives outside the repo by choice.
+if [ -f .env ]; then
+    set -a; . ./.env; set +a
+fi
+if [ -z "${GOOGLE_OAUTH_CLIENT_ID:-}" ]; then
+    echo "Error: GOOGLE_OAUTH_CLIENT_ID is not set." >&2
+    echo "Copy .env.example to .env and set it to your iOS OAuth client ID." >&2
+    exit 1
+fi
+# Derive the reverse-client-ID redirect scheme used by GoogleSignIn.
+GOOGLE_REVERSED_CLIENT_ID="com.googleusercontent.apps.${GOOGLE_OAUTH_CLIENT_ID%.apps.googleusercontent.com}"
+
 echo "Building Tardy v$VERSION..."
 
 # Build release binary
@@ -73,13 +86,13 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>GIDClientID</key>
-    <string>321723434454-cdfv8p0ue662dgms5cbq35gm1n6fagqo.apps.googleusercontent.com</string>
+    <string>$GOOGLE_OAUTH_CLIENT_ID</string>
     <key>CFBundleURLTypes</key>
     <array>
         <dict>
             <key>CFBundleURLSchemes</key>
             <array>
-                <string>com.googleusercontent.apps.321723434454-cdfv8p0ue662dgms5cbq35gm1n6fagqo</string>
+                <string>$GOOGLE_REVERSED_CLIENT_ID</string>
             </array>
         </dict>
     </array>

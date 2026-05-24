@@ -1,15 +1,11 @@
 import Foundation
 
-/// Public OAuth client ID for the Apple-platform client. Not a secret:
-/// it appears in the consent URL and is safe to ship (PKCE secures the flow).
-/// Project: tardy-app-55642 (iOS OAuth client, bundle com.nikp29.tardy).
+/// Static OAuth configuration. The client ID is intentionally NOT stored here:
+/// it is supplied at build time from `.env` (gitignored) into the app's
+/// Info.plist (`GIDClientID`), which GoogleSignIn reads at runtime. The client
+/// ID is a public identifier — it ships in the app bundle and appears in OAuth
+/// URLs — not a secret; keeping it in `.env` just keeps it out of source.
 enum GoogleOAuthConfig {
-    static let clientID = "321723434454-cdfv8p0ue662dgms5cbq35gm1n6fagqo.apps.googleusercontent.com"
+    /// Read-only Calendar scope requested in addition to GoogleSignIn's defaults.
     static let scopes = ["https://www.googleapis.com/auth/calendar.readonly"]
-
-    /// Reverse-client-ID URL scheme used as the OAuth redirect.
-    static var redirectScheme: String {
-        "com.googleusercontent.apps." + clientID
-            .replacingOccurrences(of: ".apps.googleusercontent.com", with: "")
-    }
 }
