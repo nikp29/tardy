@@ -6,21 +6,32 @@ BUILD_DIR=".build/app"
 APP_NAME="Tardy"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 
+# Load the Google OAuth client ID from .env (gitignored, kept out of source).
+# It's a public identifier, not a secret, but lives outside the repo by choice.
+if [ -f .env ]; then
+    set -a; . ./.env; set +a
+fi
+if [ -z "${GOOGLE_OAUTH_CLIENT_ID:-}" ]; then
+    echo "Error: GOOGLE_OAUTH_CLIENT_ID is not set." >&2
+    echo "Copy .env.example to .env and set it to your iOS OAuth client ID." >&2
+    exit 1
+fi
+# Derive the reverse-client-ID redirect scheme used by GoogleSignIn.
+GOOGLE_REVERSED_CLIENT_ID="com.googleusercontent.apps.${GOOGLE_OAUTH_CLIENT_ID%.apps.googleusercontent.com}"
+
 echo "Building Tardy v$VERSION..."
 
 # Build release binary
 swift build -c release 2>&1
 
 # Find the built binary
-BINARY=$(swift build -c release --show-bin-path)/Tardy
+BIN_PATH=$(swift build -c release --show-bin-path)
+BINARY="$BIN_PATH/Tardy"
 
 if [ ! -f "$BINARY" ]; then
     echo "Error: Binary not found at $BINARY"
     exit 1
 fi
-
-# Find the resource bundle
-RESOURCE_BUNDLE=$(swift build -c release --show-bin-path)/Tardy_Tardy.bundle
 
 # Clean previous build
 rm -rf "$APP_BUNDLE"
@@ -32,10 +43,12 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 # Copy binary
 cp "$BINARY" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
-# Copy resource bundle into Contents/Resources
-if [ -d "$RESOURCE_BUNDLE" ]; then
-    cp -R "$RESOURCE_BUNDLE" "$APP_BUNDLE/Contents/Resources/"
-fi
+# Copy ALL SwiftPM resource bundles (Tardy's own plus dependencies like
+# GoogleSignIn, AppAuth, GTMSessionFetcher, GoogleUtilities) into Resources.
+# GoogleSignIn loads its bundle at runtime, so omitting these breaks sign-in.
+for bundle in "$BIN_PATH"/*.bundle; do
+    [ -d "$bundle" ] && cp -R "$bundle" "$APP_BUNDLE/Contents/Resources/"
+done
 
 # Copy app icon
 if [ -f "Sources/Tardy/Resources/AppIcon.icns" ]; then
@@ -72,6 +85,17 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
     <string>AppIcon</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>GIDClientID</key>
+    <string>$GOOGLE_OAUTH_CLIENT_ID</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>$GOOGLE_REVERSED_CLIENT_ID</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>
 EOF
