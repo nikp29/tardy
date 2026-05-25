@@ -19,6 +19,10 @@ jobs:
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Build app bundle
+        env:
+          # Public OAuth client ID (not a secret) injected into Info.plist at build
+          # time. Set as a repo variable: gh variable set GOOGLE_OAUTH_CLIENT_ID
+          GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
         run: bash scripts/build-app.sh "${{ steps.version.outputs.version }}"
 
       - name: Create or update release, then upload assets
