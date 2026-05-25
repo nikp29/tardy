@@ -116,21 +116,57 @@ TARBALL="$BUILD_DIR/Tardy-$VERSION.tar.gz"
 echo "Tarball: $TARBALL"
 echo "SHA256: $(shasum -a 256 "$TARBALL" | cut -d' ' -f1)"
 
-# Create DMG for direct download from the website (drag Tardy.app → Applications).
+# Create a styled DMG for direct download (drag Tardy.app → Applications).
 # Stable filename so https://github.com/nikp29/tardy/releases/latest/download/Tardy.dmg
 # always resolves to the newest release.
 DMG="$BUILD_DIR/Tardy.dmg"
+DMG_RW="$BUILD_DIR/Tardy-rw.dmg"
 DMG_STAGING="$BUILD_DIR/dmg-staging"
-rm -rf "$DMG_STAGING" "$DMG"
+VOL_NAME="$APP_NAME"
+MOUNT_DIR="/Volumes/$VOL_NAME"
+
+rm -rf "$DMG_STAGING" "$DMG" "$DMG_RW"
 mkdir -p "$DMG_STAGING"
 cp -R "$APP_BUNDLE" "$DMG_STAGING/"
 ln -s /Applications "$DMG_STAGING/Applications"
-hdiutil create \
-    -volname "$APP_NAME" \
-    -srcfolder "$DMG_STAGING" \
-    -fs HFS+ \
-    -ov -format UDZO \
-    "$DMG"
-rm -rf "$DMG_STAGING"
+# Window background (light panel with a → arrow toward Applications).
+mkdir -p "$DMG_STAGING/.background"
+cp scripts/dmg/background.png "$DMG_STAGING/.background/background.png"
+
+# Read-write image we can arrange with Finder, then compress to read-only.
+hdiutil detach "$MOUNT_DIR" >/dev/null 2>&1 || true
+hdiutil create -volname "$VOL_NAME" -srcfolder "$DMG_STAGING" -fs HFS+ \
+    -format UDRW -ov "$DMG_RW" >/dev/null
+hdiutil attach "$DMG_RW" -readwrite -noverify -noautoopen >/dev/null
+
+# Arrange the window: Tardy.app on the left, the Applications drop-target on the
+# right, so it reads "Tardy → Applications". Best-effort — if Finder scripting is
+# unavailable (headless), the DMG still builds, just with default positions.
+osascript <<APPLESCRIPT || echo "warning: DMG layout step failed (continuing with default layout)"
+tell application "Finder"
+  tell disk "$VOL_NAME"
+    open
+    set current view of container window to icon view
+    set toolbar visible of container window to false
+    set statusbar visible of container window to false
+    set the bounds of container window to {200, 120, 740, 480}
+    set opts to the icon view options of container window
+    set arrangement of opts to not arranged
+    set icon size of opts to 112
+    set text size of opts to 12
+    set background picture of opts to file ".background:background.png"
+    set position of item "Tardy.app" of container window to {150, 175}
+    set position of item "Applications" of container window to {390, 175}
+    update without registering applications
+    delay 1
+    close
+  end tell
+end tell
+APPLESCRIPT
+
+sync
+hdiutil detach "$MOUNT_DIR" >/dev/null 2>&1 || true
+hdiutil convert "$DMG_RW" -format UDZO -imagekey zlib-level=9 -o "$DMG" >/dev/null
+rm -rf "$DMG_RW" "$DMG_STAGING"
 echo "DMG: $DMG"
 echo "DMG SHA256: $(shasum -a 256 "$DMG" | cut -d' ' -f1)"
